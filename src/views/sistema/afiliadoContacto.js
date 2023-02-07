@@ -17,7 +17,7 @@ import { cambioOpcioRuta } from "../../redux/ruta/actions";
 
 import { actualizar as actualizarContacto } from "../../redux/afiliadoContactos/actions";
 import { isEmpty, opcionInvalida, mailInvalid } from "../../libs/funciones";
-//import { afiliadoDireccionMostrar } from "../../redux/ui/actions";
+import { afiliadoDireccionMostrar } from "../../redux/ui/actions";
 
 const MEDIA_CHANGE = "ui.media.timeStamp";
 const SCREEN = "screen.timeStamp";
@@ -160,7 +160,7 @@ export class afiliadoContactoScreen extends connect(
         /**
          * CARGAR ANTERIOR
          */
-        store.dispatch(afiliadoDireccionMostrar());
+        store.dispatch(goHistoryPrev());
         store.dispatch(cambioOpcioRuta(OPCION_DOMICILIO));
     }
 
