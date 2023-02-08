@@ -4,6 +4,7 @@ import { setCurrent as setCurrentContactos } from "../afiliadoContactos/actions"
 import { getByAfiliadoId as getContacto } from "../afiliadoContactos/actions";
 import { setCurrent as setCurrentDatos } from "../afiliadoDatos/actions";
 import { getByAfiliadoId as getDomicilio, setCurrent as setCurrentDomicilio } from "../afiliadoDomicilios/actions";
+import { getDocumentaciongetByAfiliadoId } from "../afiliadoDocumentacion/actions";
 import { getGrupoFamiliar } from "../afiliados/actions";
 import { goTo } from "../routing/actions";
 import { ALTA_DE_FAMILIAR, ALTA_DE_TITULAR, VER_AFILIADO } from "./actions";
@@ -167,6 +168,7 @@ export const verAfiliado =
             dispatch(getDomicilio(action.afiliado.id));
             dispatch(getContacto(action.afiliado.id));
             dispatch(getGrupoFamiliar(action.afiliado.titularId));
+            dispatch(getDocumentaciongetByAfiliadoId(action.afiliado.id));
             dispatch(goTo("afiliadoDatos"));
         }
     };

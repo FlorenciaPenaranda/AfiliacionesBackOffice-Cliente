@@ -17,12 +17,14 @@ import { getGrupoFamiliar } from "../../redux/afiliados/actions";
 import { cambioOpcioRuta } from "../../redux/ruta/actions";
 import { get as GetAfiliadosDatos, actualizar as actualizarAfiliadoDatos, setCurrent as setCurrentAfiliadoDatos } from "../../redux/afiliadoDatos/actions";
 import { isEmpty, opcionInvalida, invalidDni, nameInvalido, invalidCUITCUIL, invalidFecha, opcionBooleanaInvalida } from "../../libs/funciones";
+import { getDocumentacionById } from "../../redux/afiliadoDocumentacion/actions";
 
 const MEDIA_CHANGE = "ui.media.timeStamp";
 const SCREEN = "screen.timeStamp";
 const AFILIADO_DATOS_SUCCESS = "afiliadoDatos.timeStamp"; //Carga de todos los combos
 const CURRENT_AFILIADO = "afiliadoDatos.currentTimeStamp";
 const AFILIADO_ACTUALIZAR_SUCCESS = "afiliadoDatos.actualizarTimeStamp";
+const AFILIADO_DOCUMENTACION = "afiliadoDocumentacion.documentacionByIdTimeStamp";
 const ALTA_TITULAR = "uiAfiliados.titularTimeStamp";
 const ALTA_FAMILIAR = "uiAfiliados.familiarTimeStamp";
 const VER_AFILIADO = "uiAfiliados.verAfiliadoTimeStamp";
@@ -34,6 +36,7 @@ export class afiliadoDatosScreen extends connect(
     AFILIADO_DATOS_SUCCESS,
     CURRENT_AFILIADO,
     AFILIADO_ACTUALIZAR_SUCCESS,
+    AFILIADO_DOCUMENTACION,
     ALTA_TITULAR,
     ALTA_FAMILIAR,
     VER_AFILIADO
@@ -53,6 +56,8 @@ export class afiliadoDatosScreen extends connect(
         this.readonly = false;
         this.hijoMenor = false;
         this.esTitular = false;
+
+        this.documentacionAfiliado = [];
 
         this.validaciones = {
             parentescoId: { invalid: false, isInvalid: isEmpty },
@@ -82,7 +87,6 @@ export class afiliadoDatosScreen extends connect(
                 position: relative;
                 width: 100vw;
                 grid-template-rows: auto 1fr;
-                justify-items: center;
             }
             :host([hidden]) {
                 display: none;
@@ -90,19 +94,50 @@ export class afiliadoDatosScreen extends connect(
             ruta-opcionescontrol {
                 width: 100vw;
             }
+            .contenedor {
+                place-items: start;
+                align-content: start;
+                grid-template-columns: 50% 50%;
+                //overflow-y: auto;
+                //height: 70vh;
+                background-color: var(--formulario);
+            }
+            .imagenes {
+                justify-content: center;
+                overflow-y: auto;
+                height: 70vh;
+                width: 47vw;
+            }
+            .imagenes::-webkit-scrollbar {
+                width: 7px;
+            }
+            .imagenes::-webkit-scrollbar-thumb {
+                background-color: var(--secundario);
+            }
+
             #cuerpo {
                 width: 100vw;
                 align-content: flex-start;
                 grid-gap: 0;
 
                 overflow-y: auto;
-                background-color: var(--formulario);
+                height: 71vh;
+                //background-color: var(--formulario);
+            }
+            #cuerpo::-webkit-scrollbar {
+                width: 7px;
+            }
+            #cuerpo::-webkit-scrollbar-thumb {
+                background-color: var(--secundario);
             }
             :host([media-Size="medium"]) #cuerpo {
                 width: 80vw;
             }
             :host([media-Size="large"]) #cuerpo {
-                width: 70vw;
+                width: 50vw;
+            }
+            :host([media-Size="large"]) .imagenes {
+                width: 48.6vw;
             }
             .grupo {
                 display: grid;
@@ -119,139 +154,161 @@ export class afiliadoDatosScreen extends connect(
                 background-color: var(--on-formulario-separador);
                 justify-self: stretch;
             }
+            iframe {
+                width: 450px;
+                height: 280px;
+
+                border-style: none;
+            }
         `;
     }
 
     render() {
         return html`
             <ruta-opcionescontrol></ruta-opcionescontrol>
-            <div id="cuerpo" class="grid row">
-                <div class="grupo">
-                    <div class="select" ?error=${this.validaciones.parentescoId.invalid}>
-                        <select ?disabled=${this.readOnly || this.esTitular} id="parentescos" .value="${this.item.parentescoId}" required @blur="${this.enlaceConHijoMenor("parentescoId")}">
-                            <option value="" disabled selected>Selecciona una opción</option>
-                            ${this.parentescos?.map((item) => {
-                                return html` <option value=${item.id} ?selected=${this.item.parentescoId == item.id}>${item.descripcion}</option> `;
-                            })}
-                        </select>
-                        <label for="parentescos">Parentescos</label>
-                        <label error>Debe seleccionar una opción</label>
-                        <label subtext>Requerido</label>
+            <div class="contenedor grid column">
+                <div id="cuerpo" class="grid row">
+                    <div class="grupo">
+                        <div class="select" ?error=${this.validaciones.parentescoId.invalid}>
+                            <select ?disabled=${this.readOnly || this.esTitular} id="parentescos" .value="${this.item.parentescoId}" required @blur="${this.enlaceConHijoMenor("parentescoId")}">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                ${this.parentescos?.map((item) => {
+                                    return html` <option value=${item.id} ?selected=${this.item.parentescoId == item.id}>${item.descripcion}</option> `;
+                                })}
+                            </select>
+                            <label for="parentescos">Parentescos</label>
+                            <label error>Debe seleccionar una opción</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="input" ?error=${this.validaciones.cuil.invalid}>
+                            <input id="cuil" ?disabled=${this.readOnly || this.esTitular} .value=${this.item.cuil} @blur="${this.enlace("cuil")}" />
+                            <label for="cuil">CUIL</label>
+                            <label error>Debe ingresar numero de CUIL válido</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="select" ?error=${this.validaciones.planId.invalid}>
+                            <select id="planes" ?disabled=${this.readOnly} .value="${this.item.planId}" required @blur="${this.enlace("planId")}">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                ${this.planes?.map((item) => {
+                                    return html` <option value=${item.id} ?selected=${this.item.planId == item.id}>${item.descripcion}</option> `;
+                                })}
+                            </select>
+                            <label for="planes">Planes</label>
+                            <label error>Debe seleccionar una opción</label>
+                            <label subtext>Requerido</label>
+                        </div>
                     </div>
-                    <div class="input" ?error=${this.validaciones.cuil.invalid}>
-                        <input id="cuil" ?disabled=${this.readOnly || this.esTitular} .value=${this.item.cuil} @blur="${this.enlace("cuil")}" />
-                        <label for="cuil">CUIL</label>
-                        <label error>Debe ingresar numero de CUIL válido</label>
-                        <label subtext>Requerido</label>
+                    <div class="linea"></div>
+                    <div class="grupo">
+                        <div class="input" ?error=${this.validaciones.apellido.invalid}>
+                            <input id="apellido" ?disabled=${this.readOnly} .value=${this.item.apellido} @blur="${this.enlace("apellido")}" />
+                            <label for="apellido">Apellido</label>
+                            <label error>Debe ingresar apellido</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="input" ?error=${this.validaciones.nombre.invalid}>
+                            <input id="nombre" ?disabled=${this.readOnly} .value=${this.item.nombre} @blur="${this.enlace("nombre")}" />
+                            <label for="nombre">Nombre</label>
+                            <label error>Debe ingresar nombre</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="select" ?error=${this.validaciones.sexo.invalid}>
+                            <select id="sexo" ?disabled=${this.readOnly} .value="${this.item.sexo}" required @blur="${this.enlace("sexo")}">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                <option value="Femenino" ?selected=${this.item.sexo?.toUpperCase() == "FEMENINO"}>Femenino</option>
+                                <option value="Masculino" ?selected=${this.item.sexo?.toUpperCase() == "MASCULINO"}>Masculino</option>
+                            </select>
+                            <label for="sexo">Sexo</label>
+                            <label error>Debe seleccionar una opción</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="input" ?error=${this.validaciones.fechaNacimiento.invalid}>
+                            <input id="nacimiento" ?disabled=${this.readOnly} .value="${this.item.fechaNacimiento?.substr(0, 10)}" type="date" @blur="${this.enlace("fechaNacimiento")}" />
+                            <label for="nacimiento">Fecha de nacimiento</label>
+                            <label error>Debe ingresar una fecha válida</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="select" ?error=${this.validaciones.tipoDocumentoId.invalid}>
+                            <select id="tipoDocumento" ?disabled=${this.readOnly} .value="${this.item.tipoDocumentoId}" required @blur="${this.enlace("tipoDocumentoId")}">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                ${this.tipoDocumento?.map((item) => {
+                                    return html` <option value=${item.id}>${item.descripcion}</option> `;
+                                })}
+                            </select>
+                            <label for="tipoDocumento">Tipo de Documento</label>
+                            <label error>Debe seleccionar una opción</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="input" ?error=${this.validaciones.documento.invalid}>
+                            <input id="documento" ?disabled=${this.readOnly} .value=${this.item.documento} @blur="${this.enlace("documento")}" />
+                            <label for="documento">Numero de documento</label>
+                            <label error>Debe ingresar numero de DNI válido</label>
+                            <label subtext>Requerido</label>
+                        </div>
                     </div>
-                    <div class="select" ?error=${this.validaciones.planId.invalid}>
-                        <select id="planes" ?disabled=${this.readOnly} .value="${this.item.planId}" required @blur="${this.enlace("planId")}">
-                            <option value="" disabled selected>Selecciona una opción</option>
-                            ${this.planes?.map((item) => {
-                                return html` <option value=${item.id} ?selected=${this.item.planId == item.id}>${item.descripcion}</option> `;
-                            })}
-                        </select>
-                        <label for="planes">Planes</label>
-                        <label error>Debe seleccionar una opción</label>
-                        <label subtext>Requerido</label>
+                    <div class="linea"></div>
+                    <div class="grupo">
+                        <div class="select" ?error=${this.validaciones.estadoCivilId.invalid}>
+                            <select id="estadosCiviles" ?disabled=${this.readOnly || this.hijoMenor} .value="${this.item.estadoCivilId}" required @blur="${this.enlace("estadoCivilId")}">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                ${this.estadosCiviles?.map((item) => {
+                                    return html` <option value=${item.id}>${item.descripcion}</option> `;
+                                })}
+                            </select>
+                            <label for="estadosCiviles">Estado civil</label>
+                            <label error>Debe seleccionar una opción</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="select" ?error=${this.validaciones.nacionalidadId.invalid}>
+                            <select id="nacionalidades" ?disabled=${this.readOnly} .value="${this.item.nacionalidadId}" required @blur="${this.enlace("nacionalidadId")}">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                ${this.nacionalidades?.map((item) => {
+                                    return html` <option value=${item.id}>${item.descripcion}</option> `;
+                                })}
+                            </select>
+                            <label for="nacionalidades">Nacionalidad</label>
+                            <label error>Debe seleccionar una opción</label>
+                            <label subtext>Requerido</label>
+                        </div>
+                        <div class="select" ?error=${this.validaciones.discapacitado.invalid}>
+                            <select id="discapacitado" ?disabled=${this.readOnly} .value="${this.item.discapacitado}" required @blur="${this.enlace("discapacitado")}">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                <option value="true">Si</option>
+                                <option value="false">No</option>
+                            </select>
+                            <label for="discapacitado">Discapacidad</label>
+                            <label error>Debe seleccionar una opción</label>
+                            <label subtext>Requerido</label>
+                        </div>
                     </div>
+                    <div class="grid column" style="padding-bottom:5rem">
+                        <button flat @click="${this.atras}">CANCELAR</button>
+                        <button raised @click="${this.siguiente}">SIGUIENTE</button>
+                    </div>
+                    <span
+                        tabindex="0"
+                        @focus="${(_) => {
+                            this.shadowRoot.querySelector("#planes").focus();
+                        }}"
+                    ></span>
                 </div>
-                <div class="linea"></div>
-                <div class="grupo">
-                    <div class="input" ?error=${this.validaciones.apellido.invalid}>
-                        <input id="apellido" ?disabled=${this.readOnly} .value=${this.item.apellido} @blur="${this.enlace("apellido")}" />
-                        <label for="apellido">Apellido</label>
-                        <label error>Debe ingresar apellido</label>
-                        <label subtext>Requerido</label>
-                    </div>
-                    <div class="input" ?error=${this.validaciones.nombre.invalid}>
-                        <input id="nombre" ?disabled=${this.readOnly} .value=${this.item.nombre} @blur="${this.enlace("nombre")}" />
-                        <label for="nombre">Nombre</label>
-                        <label error>Debe ingresar nombre</label>
-                        <label subtext>Requerido</label>
-                    </div>
-                    <div class="select" ?error=${this.validaciones.sexo.invalid}>
-                        <select id="sexo" ?disabled=${this.readOnly} .value="${this.item.sexo}" required @blur="${this.enlace("sexo")}">
-                            <option value="" disabled selected>Selecciona una opción</option>
-                            <option value="Femenino" ?selected=${this.item.sexo?.toUpperCase() == "FEMENINO"}>Femenino</option>
-                            <option value="Masculino" ?selected=${this.item.sexo?.toUpperCase() == "MASCULINO"}>Masculino</option>
-                        </select>
-                        <label for="sexo">Sexo</label>
-                        <label error>Debe seleccionar una opción</label>
-                        <label subtext>Requerido</label>
-                    </div>
-                    <div class="input" ?error=${this.validaciones.fechaNacimiento.invalid}>
-                        <input id="nacimiento" ?disabled=${this.readOnly} .value="${this.item.fechaNacimiento?.substr(0, 10)}" type="date" @blur="${this.enlace("fechaNacimiento")}" />
-                        <label for="nacimiento">Fecha de nacimiento</label>
-                        <label error>Debe ingresar una fecha válida</label>
-                        <label subtext>Requerido</label>
-                    </div>
-                    <div class="select" ?error=${this.validaciones.tipoDocumentoId.invalid}>
-                        <select id="tipoDocumento" ?disabled=${this.readOnly} .value="${this.item.tipoDocumentoId}" required @blur="${this.enlace("tipoDocumentoId")}">
-                            <option value="" disabled selected>Selecciona una opción</option>
-                            ${this.tipoDocumento?.map((item) => {
-                                return html` <option value=${item.id}>${item.descripcion}</option> `;
-                            })}
-                        </select>
-                        <label for="tipoDocumento">Tipo de Documento</label>
-                        <label error>Debe seleccionar una opción</label>
-                        <label subtext>Requerido</label>
-                    </div>
-                    <div class="input" ?error=${this.validaciones.documento.invalid}>
-                        <input id="documento" ?disabled=${this.readOnly} .value=${this.item.documento} @blur="${this.enlace("documento")}" />
-                        <label for="documento">Numero de documento</label>
-                        <label error>Debe ingresar numero de DNI válido</label>
-                        <label subtext>Requerido</label>
-                    </div>
+                <div class="imagenes inner-grid ">
+                    ${this.documentacionAfiliado?.map((item) => {
+                        return html`<div class="imagenesList grid column " @click=${this.click} .item=${item} .option=${"proxPantalla"}>
+                            <iframe type="application/pdf" src="${item.url}"></iframe>
+                        </div> `;
+                    })}
                 </div>
-                <div class="linea"></div>
-                <div class="grupo">
-                    <div class="select" ?error=${this.validaciones.estadoCivilId.invalid}>
-                        <select id="estadosCiviles" ?disabled=${this.readOnly || this.hijoMenor} .value="${this.item.estadoCivilId}" required @blur="${this.enlace("estadoCivilId")}">
-                            <option value="" disabled selected>Selecciona una opción</option>
-                            ${this.estadosCiviles?.map((item) => {
-                                return html` <option value=${item.id}>${item.descripcion}</option> `;
-                            })}
-                        </select>
-                        <label for="estadosCiviles">Estado civil</label>
-                        <label error>Debe seleccionar una opción</label>
-                        <label subtext>Requerido</label>
-                    </div>
-                    <div class="select" ?error=${this.validaciones.nacionalidadId.invalid}>
-                        <select id="nacionalidades" ?disabled=${this.readOnly} .value="${this.item.nacionalidadId}" required @blur="${this.enlace("nacionalidadId")}">
-                            <option value="" disabled selected>Selecciona una opción</option>
-                            ${this.nacionalidades?.map((item) => {
-                                return html` <option value=${item.id}>${item.descripcion}</option> `;
-                            })}
-                        </select>
-                        <label for="nacionalidades">Nacionalidad</label>
-                        <label error>Debe seleccionar una opción</label>
-                        <label subtext>Requerido</label>
-                    </div>
-                    <div class="select" ?error=${this.validaciones.discapacitado.invalid}>
-                        <select id="discapacitado" ?disabled=${this.readOnly} .value="${this.item.discapacitado}" required @blur="${this.enlace("discapacitado")}">
-                            <option value="" disabled selected>Selecciona una opción</option>
-                            <option value="true">Si</option>
-                            <option value="false">No</option>
-                        </select>
-                        <label for="discapacitado">Discapacidad</label>
-                        <label error>Debe seleccionar una opción</label>
-                        <label subtext>Requerido</label>
-                    </div>
-                </div>
-                <div class="grid column" style="padding-bottom:5rem">
-                    <button flat @click="${this.atras}">CANCELAR</button>
-                    <button raised @click="${this.siguiente}">SIGUIENTE</button>
-                </div>
-                <span
-                    tabindex="0"
-                    @focus="${(_) => {
-                        this.shadowRoot.querySelector("#planes").focus();
-                    }}"
-                ></span>
             </div>
         `;
     }
+
+    /* ${this.afiliadoDocumentacion?.map((item) => {
+                        return html`<div class="imagenesList grid column " @click=${this.click} .item=${item} .option=${"proxPantalla"}>
+                            <iframe>${item.url}</iframe>
+                        </div> `;
+                    })}
+                </div>*/
 
     atras() {
         store.dispatch(getGrupoFamiliar(store.getState().autorizacion.entities.titulares[0].titularId));
@@ -414,9 +471,21 @@ export class afiliadoDatosScreen extends connect(
             this.update();
         }
 
-        /* if (name == AFILIADO_ACTUALIZAR_SUCCESS) {
-            store.dispatch(goTo("afiliadoDireccion"));
-        }*/
+        if (name == AFILIADO_DOCUMENTACION) {
+            this.documentacionAfiliado = state.afiliadoDocumentacion.documentacionById;
+            console.log(this.documentacionAfiliado);
+
+            /*this.items = this.documentacionAfiliado.map((item) => {
+                return {
+                    id: item.id,
+                    titulo: item.documentacion,
+                    detalleDocumentacionId: item.detalleDocumentacionId,
+                    url: item.url,
+                    estado: item.estado,
+                };
+            });*/
+            this.update();
+        }
     }
 
     static get properties() {

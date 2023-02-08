@@ -105,8 +105,7 @@ export const actualizarSuccess =
             dispatch(addAfiliadoLoaded());
             dispatch(getByAfiliadoIdDomicilio(getState().afiliadoDatos.current.id));
             dispatch(addAfiliadoLoaded());
-            dispatch(getDocumentaciongetByAfiliadoId(getState().afiliadoDatos.current.id));
-            dispatch(addAfiliadoLoaded());
+
             dispatch(goTo("afiliadoDireccion"));
         }
     };

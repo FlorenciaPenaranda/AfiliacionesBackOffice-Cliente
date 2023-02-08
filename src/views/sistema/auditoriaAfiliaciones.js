@@ -18,7 +18,6 @@ import { verAfiliado } from "../../redux/uiAfiliados/actions";
 
 const MEDIA_CHANGE = "ui.media.timeStamp";
 const SCREEN = "screen.timeStamp";
-
 const BUSQUEDA = "ui.busqueda.texto";
 const ORDENAR = "ui.ordenar.timeStamp";
 
@@ -26,6 +25,7 @@ export class auditoriaAfiliaciones extends connect(store, MEDIA_CHANGE, SCREEN, 
     constructor() {
         super();
         this.area = "body";
+
         this.items = [
             {
                 apellido: "monfri",
@@ -210,7 +210,7 @@ export class auditoriaAfiliaciones extends connect(store, MEDIA_CHANGE, SCREEN, 
                 </div>
 
                 <div class="lista inner-grid ">
-                    ${this.items?.map((item) => {
+                    ${this.itemsfiltrados?.map((item) => {
                         return html`<div class="registrosList grid column " @click=${this.click} .item=${item} .option=${"proxPantalla"}>
                             <div>${item.apellido}</div>
                             <div>${item.nombre}</div>
@@ -247,18 +247,20 @@ export class auditoriaAfiliaciones extends connect(store, MEDIA_CHANGE, SCREEN, 
 
         if (name == BUSQUEDA) {
             if (state.screen.name == "auditoriaAfiliaciones") {
-                /*if (state.ui.busqueda.texto != "") {
-                    this.facturasFiltradas = this.items.filter((item) => {
-                        const text = item.PuntoVenta + item.TipoDocumento + item.NumeroComprobante;
+                if (state.ui.busqueda.texto != "") {
+                    this.itemsfiltrados = this.items.filter((item) => {
+                        const text = item.nombre + item.apellido + item.documento;
                         return text.includes(state.ui.busqueda.texto);
                     });
                 } else {
-                    this.facturasFiltradas = this.items;
+                    this.itemsfiltrados = this.items;
                     state.ui.busqueda.texto = "";
-                }*/
+                }
             }
             this.update();
         }
+
+        this.itemsfiltrados = this.items;
     }
 
     click(e) {
